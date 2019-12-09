@@ -12,23 +12,31 @@ fn main() {
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
 
-    let prog: Vec<i32> = contents
+    let prog: Vec<i64> = contents
         .trim()
         .split(',')
-        .map(|s| s.parse::<i32>().unwrap())
+        .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
     println!("{}", p1(&prog));
 }
 
-fn p1(prog: &[i32]) -> i32 {
-    let (s, r) = channel();
+fn p1(prog: &[i64]) -> i64 {
+    let (send, cpu_in) = channel();
+    let (cpu_out, rec) = channel();
 
-    let mut cpu = IntCodeVM::new(prog, r, s);
-    let t1 = thread::spawn(move || {
-        cpu.run();
-    });
+    send.send(2);
+    let mut cpu = IntCodeVM::new(prog, cpu_in, cpu_out);
+    let val = cpu.run();
+    val
+}
 
-    t1.join();
-    0
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_1_1() {
+        let prog = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99];
+    }
 }

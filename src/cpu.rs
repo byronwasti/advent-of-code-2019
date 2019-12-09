@@ -5,123 +5,168 @@ use std::thread;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct IntCodeVM {
-    prog: Vec<i32>,
-    input: Receiver<i32>,
-    output: Sender<i32>,
+    prog: Vec<i64>,
+    input: Receiver<i64>,
+    output: Sender<i64>,
+    pc: usize,
+    relative_base: isize,
 }
 
 impl IntCodeVM {
-    pub fn new(prog: &[i32], input: Receiver<i32>, output: Sender<i32>) -> Self {
-        let prog = prog.to_vec();
+    pub fn new(prog: &[i64], input: Receiver<i64>, output: Sender<i64>) -> Self {
+        let mut prog = prog.to_vec();
+        let mut mem = vec![0; 1024]; 
+        prog.append(&mut mem);
         Self {
-            prog, input, output
+            prog,
+            input,
+            output,
+            pc: 0,
+            relative_base: 0,
         }
     }
 
-    pub fn run(&mut self) -> i32 {
-        let vals = &mut self.prog;
-        let mut pc = 0;
+    fn get_value(&self, mode: Option<&i64>, param: i64) -> i64 {
+        match mode {
+            Some(1) => param,
+            Some(2) => self.prog[(self.relative_base + param as isize) as usize],
+            _ => self.prog[param as usize],
+        }
+    }
+
+    fn set_value(&mut self, mode: Option<&i64>, param: i64, val: i64) {
+        match mode {
+            Some(2) => self.prog[(self.relative_base + param as isize) as usize] = val,
+            _ => self.prog[param as usize] = val,
+        }
+    }
+
+    pub fn run(&mut self) -> i64 {
         let mut output_val = 0;
 
         loop {
-            let op = vals[pc];
+            let op = self.prog[self.pc];
             let (op, modes) = deconstruct_op(op);
-            let op_char = match op {
+            match op {
                 1 => {
-                    let a = vals[pc + 1];
-                    let b = vals[pc + 2];
-                    let c = vals[pc + 3];
-                    vals[c as usize] =
-                        get_param(&vals, modes.get(0), a) + get_param(&vals, modes.get(1), b);
-                    pc += 4;
+                    let p0 = self.prog[self.pc + 1];
+                    let p1 = self.prog[self.pc + 2];
+                    let p2 = self.prog[self.pc + 3];
+
+                    let x = self.get_value(modes.get(0), p0);
+                    let y = self.get_value(modes.get(1), p1);
+                    let z = x + y;
+                    self.set_value(modes.get(2), p2, z);
+
+                    self.pc += 4;
                 }
                 2 => {
-                    let a = vals[pc + 1];
-                    let b = vals[pc + 2];
-                    let c = vals[pc + 3];
+                    let p0 = self.prog[self.pc + 1];
+                    let p1 = self.prog[self.pc + 2];
+                    let p2 = self.prog[self.pc + 3];
 
-                    vals[c as usize] =
-                        get_param(&vals, modes.get(0), a) * get_param(&vals, modes.get(1), b);
-                    pc += 4;
+                    let x = self.get_value(modes.get(0), p0);
+                    let y = self.get_value(modes.get(1), p1);
+                    let z = x * y;
+                    self.set_value(modes.get(2), p2, z);
+                    self.pc += 4;
                 }
                 3 => {
-                    let a = vals[pc + 1];
+                    let p0 = self.prog[self.pc + 1];
                     let val = self.input.recv().unwrap();
-                    vals[a as usize] = val;
-                    pc += 2;
+                    self.set_value(modes.get(0), p0, val);
+                    self.pc += 2;
                 }
                 4 => {
-                    let a = vals[pc + 1];
-                    let val = get_param(&vals, modes.get(0), a);
-                    println!("OUT: {}", val);
-                    output_val = val;
-                    let _ = self.output.send(val);
-                    pc += 2;
+                    let p0 = self.prog[self.pc + 1];
+
+                    let x = self.get_value(modes.get(0), p0);
+                    let _ = self.output.send(x);
+                    self.pc += 2;
                 }
                 5 => {
-                    let a = vals[pc + 1];
-                    let b = vals[pc + 2];
+                    let p0 = self.prog[self.pc + 1];
+                    let p1 = self.prog[self.pc + 2];
 
-                    if get_param(&vals, modes.get(0), a) != 0 {
-                        pc = get_param(&vals, modes.get(1), b) as usize;
+                    let x = self.get_value(modes.get(0), p0);
+                    let y = self.get_value(modes.get(1), p1);
+
+                    if x != 0 {
+                        self.pc = y as usize;
                     } else {
-                        pc += 3;
+                        self.pc += 3;
                     }
                 }
                 6 => {
-                    let a = vals[pc + 1];
-                    let b = vals[pc + 2];
+                    let p0 = self.prog[self.pc + 1];
+                    let p1 = self.prog[self.pc + 2];
 
-                    if get_param(&vals, modes.get(0), a) == 0 {
-                        pc = get_param(&vals, modes.get(1), b) as usize;
+                    let x = self.get_value(modes.get(0), p0);
+                    let y = self.get_value(modes.get(1), p1);
+
+                    if x == 0 {
+                        self.pc = y as usize;
                     } else {
-                        pc += 3;
+                        self.pc += 3;
                     }
                 }
                 7 => {
-                    let a = vals[pc + 1];
-                    let b = vals[pc + 2];
-                    let c = vals[pc + 3];
+                    let p0 = self.prog[self.pc + 1];
+                    let p1 = self.prog[self.pc + 2];
+                    let p2 = self.prog[self.pc + 3];
 
-                    if get_param(&vals, modes.get(0), a, pc) < get_param(&vals, modes.get(1), b, pc) {
-                        vals[c as usize] = 1;
+                    let x = self.get_value(modes.get(0), p0);
+                    let y = self.get_value(modes.get(1), p1);
+
+                    if x < y {
+                        self.set_value(modes.get(2), p2, 1);
                     } else {
-                        vals[c as usize] = 0;
+                        self.set_value(modes.get(2), p2, 0);
                     }
 
-                    pc += 4;
+                    self.pc += 4;
                 }
                 8 => {
-                    let a = vals[pc + 1];
-                    let b = vals[pc + 2];
-                    let c = vals[pc + 3];
+                    let p0 = self.prog[self.pc + 1];
+                    let p1 = self.prog[self.pc + 2];
+                    let p2 = self.prog[self.pc + 3];
 
-                    if get_param(&vals, modes.get(0), a, pc) == get_param(&vals, modes.get(1), b, pc) {
-                        vals[c as usize] = 1;
+                    let x = self.get_value(modes.get(0), p0);
+                    let y = self.get_value(modes.get(1), p1);
+
+                    if x == y {
+                        self.set_value(modes.get(2), p2, 1);
                     } else {
-                        vals[c as usize] = 0;
+                        self.set_value(modes.get(2), p2, 0);
                     }
 
-                    pc += 4;
+                    self.pc += 4;
+                }
+                9 => {
+                    let p0 = self.prog[self.pc + 1];
+
+                    let x = self.get_value(modes.get(0), p0);
+                    self.relative_base += x as isize;
+                    self.pc += 2;
                 }
                 99 => {
                     break;
                 }
-                x => panic!(format!("Bad op: {} @ {}", x, pc)),
-            };
+                x => panic!(format!("Bad op: {} @ {}", x, self.pc)),
+            }
         }
         output_val
     }
 }
 
-fn deconstruct_op(op: i32) -> (i32, Vec<i32>) {
+fn deconstruct_op(op: i64) -> (i64, Vec<i64>) {
     let mut op = op.to_string();
 
     let mode_set: Vec<_> = op
         .chars()
         .rev()
         .skip(2)
-        .map(|x| x.to_digit(10).unwrap() as i32)
+        .map(|x| x.to_digit(10).unwrap() as i64)
         .collect();
 
     let last_chr = op.pop();
@@ -135,13 +180,6 @@ fn deconstruct_op(op: i32) -> (i32, Vec<i32>) {
         op.push(c);
     }
 
-    let op = op.parse::<i32>().unwrap();
+    let op = op.parse::<i64>().unwrap();
     (op, mode_set)
-}
-
-fn get_param(vals: &[i32], mode: Option<&i32>, param: i32) -> i32 {
-    match mode {
-        Some(1) => param,
-        _ => vals[param as usize],
-    }
 }
