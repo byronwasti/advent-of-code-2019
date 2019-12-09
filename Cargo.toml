@@ -1,0 +1,8 @@
+[package]
+name = "advent-of-code-2019"
+version = "0.1.0"
+authors = ["Byron Wasti <byron.wasti@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+permutohedron = "0.2.4"
