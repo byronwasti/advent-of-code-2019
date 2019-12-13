@@ -1,11 +1,11 @@
-use advent_of_code_2019::cpu; 
+use advent_of_code_2019::cpu;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
-use advent_of_code_2019::cpu::IntCodeVM; 
+use advent_of_code_2019::cpu::IntCodeVM;
 
 fn main() {
     let mut file = File::open("input/09/input").unwrap();
@@ -37,6 +37,8 @@ mod tests {
 
     #[test]
     fn test_1_1() {
-        let prog = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99];
+        let prog = [
+            109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99,
+        ];
     }
 }

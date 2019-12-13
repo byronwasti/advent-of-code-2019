@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader, Read};
-use std::thread;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
 
 pub struct IntCodeVM {
     prog: Vec<i64>,
@@ -15,7 +15,7 @@ pub struct IntCodeVM {
 impl IntCodeVM {
     pub fn new(prog: &[i64], input: Receiver<i64>, output: Sender<i64>) -> Self {
         let mut prog = prog.to_vec();
-        let mut mem = vec![0; 1024]; 
+        let mut mem = vec![0; 1024];
         prog.append(&mut mem);
         Self {
             prog,

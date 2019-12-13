@@ -36,7 +36,13 @@ fn p2(orbit_pairs: &[(String, String)]) -> usize {
     }
     let mut orbit_tree = OrbitTree::new();
     for planet in rev_orbit_map.get(&"COM".to_owned()).unwrap() {
-        build_orbit_tree(&rev_orbit_map, &mut orbit_tree, &"COM".to_owned(), &planet, 1);
+        build_orbit_tree(
+            &rev_orbit_map,
+            &mut orbit_tree,
+            &"COM".to_owned(),
+            &planet,
+            1,
+        );
     }
 
     let mut pyou = orbit_tree.get(&"YOU".to_owned()).unwrap();

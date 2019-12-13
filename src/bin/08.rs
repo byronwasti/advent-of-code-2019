@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
 
-
 fn main() {
     let mut file = File::open("input/08/input").unwrap();
     let mut contents = String::new();
@@ -26,13 +25,13 @@ fn p2(vals: &[i32], size: (usize, usize)) {
     for chunk in vals.chunks(size.0 * size.1) {
         for (idx, pixel) in chunk.iter().enumerate() {
             if buffer[idx] != 2 {
-                continue
+                continue;
             }
 
             match pixel {
                 0 => buffer[idx] = 0,
                 1 => buffer[idx] = 1,
-                2 => {},
+                2 => {}
                 _ => panic!("Bad pixel value"),
             }
         }

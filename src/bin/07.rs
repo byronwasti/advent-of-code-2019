@@ -1,13 +1,13 @@
+use advent_of_code_2019::cpu;
+use permutohedron::Heap;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
-use std::collections::HashSet;
-use permutohedron::Heap;
-use advent_of_code_2019::cpu; 
 
-use std::thread;
-use std::sync::{Arc, RwLock};
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, RwLock};
+use std::thread;
 
 fn main() {
     let mut file = File::open("input/07/input").unwrap();
@@ -19,7 +19,6 @@ fn main() {
         .split(',')
         .map(|s| s.parse::<i32>().unwrap())
         .collect();
-
 
     println!("{}", p2(Arc::new(prog)));
 }
@@ -82,9 +81,8 @@ fn p2(prog: Arc<Vec<i32>>) -> i32 {
         if out > max_val {
             max_val = out;
         }
-    
     }
-    
+
     max_val
 }
 
@@ -131,16 +129,20 @@ mod test {
     #[test]
     #[ignore]
     fn test_2_1() {
-        let prog = vec![3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26, 27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5];
+        let prog = vec![
+            3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1,
+            28, 1005, 28, 6, 99, 0, 0, 5,
+        ];
         assert_eq!(p2(Arc::new(prog)), 139629729);
     }
 
     #[test]
     fn test_2_2() {
-        let prog = vec![3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
--5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
-53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10];
+        let prog = vec![
+            3, 52, 1001, 52, -5, 52, 3, 53, 1, 52, 56, 54, 1007, 54, 5, 55, 1005, 55, 26, 1001, 54,
+            -5, 54, 1105, 1, 12, 1, 53, 54, 53, 1008, 54, 0, 55, 1001, 55, 1, 55, 2, 53, 55, 53, 4,
+            53, 1001, 56, -1, 56, 1005, 56, 6, 99, 0, 0, 0, 0, 10,
+        ];
         assert_eq!(p2(Arc::new(prog)), 18216);
     }
 }
-
