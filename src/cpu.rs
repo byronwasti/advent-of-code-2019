@@ -1,3 +1,4 @@
+use log::debug;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader, Read};
@@ -10,10 +11,16 @@ pub struct IntCodeVM {
     output: Sender<i64>,
     pc: usize,
     relative_base: isize,
+    input_signaler: Sender<()>,
 }
 
 impl IntCodeVM {
-    pub fn new(prog: &[i64], input: Receiver<i64>, output: Sender<i64>) -> Self {
+    pub fn new(
+        prog: &[i64],
+        input: Receiver<i64>,
+        output: Sender<i64>,
+        input_signaler: Sender<()>,
+    ) -> Self {
         let mut prog = prog.to_vec();
         let mut mem = vec![0; 1024];
         prog.append(&mut mem);
@@ -23,6 +30,7 @@ impl IntCodeVM {
             output,
             pc: 0,
             relative_base: 0,
+            input_signaler,
         }
     }
 
@@ -47,6 +55,7 @@ impl IntCodeVM {
         loop {
             let op = self.prog[self.pc];
             let (op, modes) = deconstruct_op(op);
+            //debug!("OP: {}", &op);
             match op {
                 1 => {
                     let p0 = self.prog[self.pc + 1];
@@ -72,8 +81,11 @@ impl IntCodeVM {
                     self.pc += 4;
                 }
                 3 => {
+                    debug!("WAIT ON INPUT");
                     let p0 = self.prog[self.pc + 1];
+                    self.input_signaler.send(());
                     let val = self.input.recv().unwrap();
+                    debug!("GOT INPUT: {}", val);
                     self.set_value(modes.get(0), p0, val);
                     self.pc += 2;
                 }

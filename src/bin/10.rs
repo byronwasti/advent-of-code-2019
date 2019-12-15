@@ -24,118 +24,25 @@ fn main() {
         }
     }
 
-    asteroids = asteroids
-        .iter()
-        .map(|(x, y)| (*x, max_y as i32 - y))
-        .collect::<Vec<_>>();
-
     println!("{:?}", p2(&asteroids, (20, 21)));
 }
 
-fn p2_(asteroids: &[(i32, i32)], origin: (i32, i32)) -> i32 {
+fn p2(asteroids: &[(i32, i32)], origin: (i32, i32)) -> i32 {
+    let convert_to_polar = get_polar_func(origin);
+
+    for a in asteroids {
+        println!("{:?} -> {:?}", a, convert_to_polar(*a));
+    }
     0
 }
 
-fn p2(asteroids: &[(i32, i32)], origin: (i32, i32)) -> i32 {
-    let asteroids_origin: Vec<_> = asteroids
-        .iter()
-        .map(|(x, y)| (x - origin.0, origin.1 - y))
-        .filter(|c| *c != (0, 0))
-        .collect();
-
-    let polar: Vec<_> = asteroids_origin
-        .iter()
-        //.map(|coord| convert_to_polar(*coord, (0, 0)))
-        .map(|coord| convert_to_polar((0, 0), *coord))
-        .collect();
-
-    let mut polar_cart: Vec<_> = polar.iter().zip(asteroids).collect();
-    polar_cart.sort_unstable_by(|(p1, _), (p2, _)| {
-        let initial = p1.1.partial_cmp(&p2.1).unwrap();
-        if initial == Ordering::Equal {
-            p1.0.partial_cmp(&p2.0).unwrap()
-        } else {
-            initial
-        }
-    });
-
-    /*
-    for (p, c) in polar_cart {
-        println!("{:?} -> {:?}", c, p);
+fn get_polar_func(origin: (i32, i32)) -> impl Fn((i32, i32)) -> (i32, i32) {
+    move |a: (i32, i32)| {
+        let a = (a.0 - origin.0, a.1 - origin.1);
+        let r = a.0.pow(2) + a.1.pow(2);
+        let theta = ((a.1 as f64).atan2(a.0 as f64) * 100.).round() as i32;
+        (r, theta)
     }
-    */
-
-    let mut eliminated = HashSet::new();
-    let goal_len = polar_cart.len();
-    let mut the_one = (0, 0);
-
-    while eliminated.len() != goal_len {
-        let mut prev: Option<f64> = None;
-        for (p, c) in &polar_cart {
-            if eliminated.contains(&c) {
-                continue;
-            }
-            if let Some(prev) = prev {
-                if p.1 == prev {
-                    continue;
-                }
-            }
-
-            eliminated.insert(c);
-            prev = Some(p.1);
-            println!("ELIMINATED: {:?} ({:?})", c, p);
-            //println!("ELIMINATED: {:?}", (c.0 + origin.0, c.1 + origin.1));
-            if eliminated.len() == 200 {
-                the_one = **c;
-            }
-        }
-    }
-
-    the_one.0 * 100 + the_one.1
-}
-
-fn p2__(asteroids: &[(i32, i32)], origin: (i32, i32)) -> i32 {
-    // MAX LOC: (20, 21)
-
-    let mut polar_coords: Vec<((i32, f64), (i32, i32))> = Vec::new();
-    for asteroid in asteroids {
-        if *asteroid == origin {
-            continue;
-        }
-
-        let polar = convert_to_polar(origin, *asteroid);
-        let val = (polar, *asteroid);
-        polar_coords.push(val);
-    }
-
-    polar_coords.sort_unstable_by(|(p1, _), (p2, _)| {
-        let initial = p1.1.partial_cmp(&p2.1).unwrap();
-        if initial == Ordering::Equal {
-            p1.0.partial_cmp(&p2.0).unwrap()
-        } else {
-            initial
-        }
-    });
-
-    for (p, c) in polar_coords {
-        println!(
-            "{:?}  ->  {:?} ({:?})",
-            p,
-            c,
-            (c.0 - origin.0, c.1 - origin.1)
-        );
-    }
-    2
-}
-
-fn convert_to_polar(origin: (i32, i32), coord: (i32, i32)) -> (i32, f64) {
-    let x = coord.0 - origin.0;
-    let y = coord.1 - origin.1;
-
-    let r_squared = x.pow(2) + y.pow(2);
-    let theta = (y as f64).atan2(x as f64) + PI;
-    let theta = theta % (2. * PI);
-    (r_squared, theta)
 }
 
 fn p1(asteroids: &[(i32, i32)]) -> i32 {
@@ -204,15 +111,6 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn test_convert_to_polar_1() {
-        assert_eq!(convert_to_polar((0, 0), (1, 0)), (1, 0.));
-        assert_eq!(convert_to_polar((0, 0), (-1, 0)), (1, 3. * PI / 2.));
-        assert_eq!(convert_to_polar((0, 0), (0, 1)), (1, 0.));
-        assert_eq!(convert_to_polar((0, 0), (0, -1)), (1, PI));
-    }
-
-    #[test]
-    #[ignore]
     fn test_slopes() {
         assert_eq!(find_slope((5, 8), (8, 8)), (-1, 0));
     }
@@ -271,6 +169,12 @@ mod tests {
         ..#.#.....#....##";
         let a = convert_to_asteroids(&s);
         assert_eq!(p2(&a, (8, 3)), 5);
+    }
+
+    #[test]
+    fn test_2_3() {
+        let a = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+        assert_eq!(p2(&a, (0, 0)), 10);
     }
 
     #[test]
